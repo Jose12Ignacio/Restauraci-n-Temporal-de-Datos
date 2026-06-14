@@ -160,12 +160,6 @@ class InterfazProyecto:
 
         tk.Button(
             frame,
-            text="Recuperar sin CRC",
-            command=self.recuperar_sin_crc
-        ).grid(row=1, column=2, padx=5, pady=5)
-
-        tk.Button(
-            frame,
             text="Guardar como",
             command=self.guardar_como
         ).grid(row=1, column=3, padx=5, pady=5)

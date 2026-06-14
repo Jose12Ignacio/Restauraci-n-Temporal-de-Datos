@@ -1,5 +1,5 @@
 from reto3.crc import calcular_crc16
-
+from common.formato import binario_a_bytes, limpiar_espacios_binario
 
 def invertir_bit_en_posicion(datos, posicion_global):
     datos_modificados = bytearray(datos)
@@ -102,22 +102,44 @@ def corregir_con_crc_original(datos_corruptos, crc_original, max_bits_rafaga=16)
             "un burst mayor al límite permitido o que el CRC no corresponda."
         )
     }
+
+
 def recuperar_texto_aproximado(datos_corruptos):
     """
     Intenta recuperar texto desde bytes corruptos sin usar CRC.
-    No garantiza recuperación exacta.
+    Retorna solo la cadena de texto para mantener compatibilidad con Menu.py
     """
+    return datos_corruptos.decode("utf-8", errors="replace")
 
-    texto = datos_corruptos.decode("utf-8", errors="replace")
 
-    caracteres_invalidos = texto.count("�")
-
-    return texto, {
-        "recuperado": True,
-        "metodo": "recuperacion_aproximada_utf8",
-        "caracteres_invalidos": caracteres_invalidos,
-        "advertencia": (
-            "Esta recuperación no garantiza que el texto sea idéntico "
-            "al original porque no usa CRC original."
-        )
-    }
+def corregir_datos_segmentados(lista_segmentos, max_bits_rafaga=16):
+    """
+    Nueva función para el torneo: recibe la lista 'data' del JSON,
+    repara cada segmento por separado y retorna los bytes totales limpios.
+    """
+    bytes_totales = bytearray()
+    bloques_corregidos = 0
+    bloques_sanos = 0
+    bloques_fallidos = 0
+    
+    for seg in lista_segmentos:
+        bits_actuales = seg["bits"].replace(" ", "")
+        crc_esperado = seg.get("checksum", seg.get("residuo_crc", 0))
+        datos_bloque_bytes = bytes([int(bits_actuales, 2)]) # Convierte los 8 bits directos a un byte
+        
+        # Si el bloque ya es correcto desde el inicio
+        if calcular_crc16(datos_bloque_bytes) == crc_esperado:
+            bytes_totales.extend(datos_bloque_bytes)
+            bloques_sanos += 1
+            continue
+            
+        # Reutiliza tus funciones existentes de inversión de bits
+        datos_reparados, info = corregir_con_crc_original(datos_bloque_bytes, crc_esperado, max_bits_rafaga)
+        
+        bytes_totales.extend(datos_reparados)
+        if info.get("corregido"):
+            bloques_corregidos += 1
+        else:
+            bloques_fallidos += 1
+            
+    return bytes(bytes_totales), bloques_sanos, bloques_corregidos, bloques_fallidos
