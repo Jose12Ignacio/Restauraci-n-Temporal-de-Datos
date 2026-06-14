@@ -1,7 +1,7 @@
 from common.funciones import leer_bytes, guardar_bytes
 
 #Se definen las validaciones para clave y mensaje
-def validarClave (clave: str) -> None:
+def validarClave (clave: str):
 
     if not clave:
         raise ValueError ("La clave no puede estar vacía")
@@ -13,7 +13,7 @@ def validarClave (clave: str) -> None:
         )
 
 
-def validarMensaje (mensaje_len: int, clave_len: int) -> None:
+def validarMensaje (mensaje_len: int, clave_len: int):
 
     minimo = 2 * clave_len
     if mensaje_len < minimo:
@@ -24,13 +24,13 @@ def validarMensaje (mensaje_len: int, clave_len: int) -> None:
         )
     
 #Creacion de la funcion XOR
-def xor_con_clave (datos: bytes, clave: bytes) -> bytes:
+def xor_con_clave (datos: bytes, clave: bytes):
 
     n = len(clave)
     return bytes (b ^ clave [i % n] for i, b in enumerate(datos))
 
 #se define una API publica
-def cifrar (texto: str, clave: str) -> bytes:
+def cifrar (texto: str, clave: str):
 
     validarClave(clave)
     validarMensaje(len(texto), len(clave))
@@ -39,7 +39,7 @@ def cifrar (texto: str, clave: str) -> bytes:
     clave_bytes = clave.encode("utf-8")
     return xor_con_clave(datos, clave_bytes)
 
-def descifrar (datos: bytes, clave: str) -> str:
+def descifrar (datos: bytes, clave: str):
 
     validarClave(clave)
 
@@ -47,10 +47,10 @@ def descifrar (datos: bytes, clave: str) -> str:
     texto_bytes = xor_con_clave(datos, clave_bytes)
     return texto_bytes.decode("utf-8")
 
-def guardar_cifrado (datos: bytes, ruta: str) -> None:
+def guardar_cifrado (datos: bytes, ruta: str):
 
     guardar_bytes (ruta, datos)
 
-def cargar_cifrado (ruta: str) -> bytes:
+def cargar_cifrado (ruta: str):
 
     return leer_bytes(ruta)

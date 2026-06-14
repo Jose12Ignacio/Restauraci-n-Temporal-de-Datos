@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 IC_REFERENCIA = 0.0667
 
-def indice_coincidencia (datos: bytes) -> float:
+def indice_coincidencia (datos: bytes):
 
     n = len(datos)
     if n < 2:
@@ -16,7 +16,7 @@ def indice_coincidencia (datos: bytes) -> float:
     denominador = n * (n - 1)
     return numerador / denominador
 
-def ic_promedio(cifrado: bytes, longitud: int) -> float:
+def ic_promedio(cifrado: bytes, longitud: int):
 
     columnas = [cifrado [i::longitud] for i in range (longitud)]
     ics = [indice_coincidencia(col) for col in columnas if len(col) >= 2]
@@ -25,10 +25,7 @@ def ic_promedio(cifrado: bytes, longitud: int) -> float:
         return 0.0
     return sum(ics) / len(ics)
 
-def estimar_long_clave(
-    cifrado: bytes, 
-    max_long: int = 10,
-) -> List[Tuple[int, float]]:
+def estimar_long_clave(cifrado: bytes, max_long: int = 10):
     
     max_long = min(max_long, 10)  #restringe la clave a 10 o menos
     max_long = min(max_long, len(cifrado) // 2)  #suficientes datos necesarios
