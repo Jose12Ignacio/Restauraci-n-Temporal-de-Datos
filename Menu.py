@@ -163,6 +163,7 @@ class MenuLogico:
         """
         Genera el archivo JSON estructurado por segmentos con sus respectivas
         sumatorias (CRC) correctas antes de ser corrompido, usando bloques de 8 bits.
+         Muestra un extracto de los CRC generados originalmente.
         """
         valido, mensaje = self.validar_archivo()
         if not valido:
@@ -174,6 +175,8 @@ class MenuLogico:
                 return "Error: El archivo seleccionado está vacío."
 
             segmentos = []
+            extracto_pantalla = []
+            
             # Procesar bloque por bloque (8 bits = 1 byte según la rúbrica)
             for idx, byte in enumerate(datos_bytes):
                 bits_cadena = format(byte, "08b")
@@ -182,8 +185,12 @@ class MenuLogico:
                 segmentos.append({
                     "id": idx + 1,
                     "bits": bits_cadena,
-                    "checksum": crc_segmento  # Sumatoria por segmento requerida por el profesor
+                    "checksum": crc_segmento  
                 })
+                
+                # Guardamos los primeros 5 bloques para mostrarlos como muestra en la interfaz
+                if idx < 5:
+                    extracto_pantalla.append(f"  • Bloque {idx+1} ('{chr(byte)}'): CRC 0x{crc_segmento:04X}")
 
             resultado = {
                 "metadata": {
@@ -195,7 +202,14 @@ class MenuLogico:
 
             ruta_salida = self.archivo_actual + ".reto3.json"
             guardar_texto(ruta_salida, json.dumps(resultado, indent=2))
-            return f"Estructura de verificación generada con éxito en:\n{ruta_salida}"
+            
+            msg_exito = (
+                f"Estructura de verificación generada con éxito en:\n{ruta_salida}\n\n"
+                f"Extracto de Sumatorias Originales (Primeros bloques):\n"
+                f"{'\n'.join(extracto_pantalla)}\n"
+                f"  ... (+ {len(datos_bytes) - min(len(datos_bytes), 5)} bloques guardados en el JSON)."
+            )
+            return msg_exito
 
         except Exception as e:
             return f"Error al generar la estructura de verificación: {e}"
@@ -246,6 +260,7 @@ class MenuLogico:
     def verificar_crc(self):
         """
         Analiza cada segmento del JSON comparando sus bits actuales contra su sumatoria esperada.
+        Muestra detalladamente los CRC originales vs corruptos en caso de fallo.
         """
         valido, mensaje = self.validar_archivo()
         if not valido:
@@ -262,19 +277,32 @@ class MenuLogico:
             if not segmentos:
                 return "Error: Estructura de segmentos no encontrada en el JSON."
 
-            bloques_corruptos = []
+            bloques_corruptos_info = []
             for seg in segmentos:
                 datos_bytes = binario_a_bytes(seg["bits"])
                 crc_esperado = seg.get("checksum", seg.get("residuo_crc", 0))
                 
+                # Calcular código actual sobre los bits que están cargados en el archivo
                 crc_actual = calcular_crc16(datos_bytes)
+                
                 if crc_actual != crc_esperado:
-                    bloques_corruptos.append(str(seg["id"]))
+                    # Guardamos el ID junto con la comparativa visual de los dos CRCs en Hexadecimal
+                    bloques_corruptos_info.append(
+                        f"  -> Bloque ID {seg['id']}:\n"
+                        f"     [CRC Original Esperado]: 0x{crc_esperado:04X} ({crc_esperado})\n"
+                        f"     [CRC Corrupto Actual ]: 0x{crc_actual:04X} ({crc_actual})"
+                    )
 
-            if not bloques_corruptos:
-                return "Integridad Perfecta: Todos los segmentos coinciden con sus sumatorias correctas."
+            if not bloques_corruptos_info:
+                return " Integridad Perfecta: Todos los segmentos coinciden con sus sumatorias correctas."
             else:
-                return f" Inconsistencia Detectada: Los siguientes bloques están corruptos: {', '.join(bloques_corruptos)}"
+                reporte_fallo = (
+                    f" Inconsistencia Detectada en la Línea Temporal:\n"
+                    f"==================================================\n"
+                    f"{'\n'.join(bloques_corruptos_info)}\n"
+                    f"=================================================="
+                )
+                return reporte_fallo
 
         except Exception as e:
             return f"Error al verificar la integridad: {e}"
@@ -282,8 +310,8 @@ class MenuLogico:
     def corregir_archivo_con_crc(self, ruta_crc_ignorada=None, max_bits_rafaga=16):
         """
         Lógica del Reto 3 adaptada al Torneo: Lee el archivo JSON por segmentos, invoca la 
-        función por bloques de correccion.py (que por dentro usa corregir_con_crc_original)
-        y genera el archivo limpio (.txt).
+        función por bloques de correccion.py, genera el archivo limpio (.txt) y muestra
+        el mensaje de texto normal recuperado en el reporte.
         """
         valido, mensaje = self.validar_archivo()
         if not valido:
@@ -302,23 +330,31 @@ class MenuLogico:
             if not segmentos:
                 return "Error: No se encontró la lista de segmentos ('data') en el archivo."
 
+            # Llamada a la función segmentada de correccion.py
             datos_sanos, sanos, corregidos, fallidos = corregir_datos_segmentados(segmentos, max_bits_rafaga)
 
             ruta_salida = self.archivo_actual.replace(".json", "") + ".restaurado.txt"
             
+            # Decodificar de forma segura la tira completa de bytes
             try:
                 texto_limpio = datos_sanos.decode('utf-8')
             except UnicodeDecodeError:
                 texto_limpio = datos_sanos.decode('latin-1')
 
+            # Guardar en disco duro el archivo corregido
             guardar_texto(ruta_salida, texto_limpio)
 
+            # --- AQUÍ AGREGAMOS EL MENSAJE NORMAL AL REPORTE ---
             reporte = (
                 f"--- Reporte del Torneo (Reto 3) ---\n"
                 f"Tamaño de segmento: {bits_por_segmento} bits.\n"
                 f"Bloques originales intactos: {sanos}\n"
                 f"Bloques reparados por inversión: {corregidos}\n"
                 f"Bloques no recuperables: {fallidos}\n\n"
+                f"MENSAJE RECUPERADO:\n"
+                f"========================================\n"
+                f"{texto_limpio}\n"
+                f"========================================\n\n"
                 f"Resultado exportado a: {ruta_salida}"
             )
             return reporte

@@ -146,23 +146,18 @@ class InterfazProyecto:
             text="Verificar CRC",
             command=self.verificar_crc
         ).grid(row=0, column=4, padx=5)
-        tk.Button(
-            frame,
-            text="Buscar CRC original",
-            command=self.buscar_crc
-        ).grid(row=1, column=0, padx=5, pady=5)
-
+        
         tk.Button(
             frame,
             text="Corregir con CRC",
             command=self.corregir_con_crc
-        ).grid(row=1, column=1, padx=5, pady=5)
+        ).grid(row=1, column=0, padx=5, pady=5)
 
         tk.Button(
             frame,
             text="Guardar como",
             command=self.guardar_como
-        ).grid(row=1, column=3, padx=5, pady=5)
+        ).grid(row=1, column=1, padx=5, pady=5)
 
     def crear_salida(self):
         frame = tk.LabelFrame(self.ventana, text="Salida del programa")
