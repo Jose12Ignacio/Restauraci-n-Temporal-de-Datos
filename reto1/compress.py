@@ -103,7 +103,7 @@ def comprimir(texto: str, algoritmo: str):
 
     compresion.append({
         "algoritmo": "LZW",
-        "etructura": estructura_lzw,
+        "estructura": estructura_lzw,
     })
 
     return {"compresion": compresion}

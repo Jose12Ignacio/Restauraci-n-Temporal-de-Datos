@@ -29,7 +29,7 @@ def estimar_long_clave(cifrado: bytes, max_long: int = 10):
     
     max_long = min(max_long, 10)  #restringe la clave a 10 o menos
     max_long = min(max_long, len(cifrado) // 2)  #suficientes datos necesarios
-    max_long = min(max_long, 1)
+    max_long = max(max_long, 1)
 
     resultados: List[Tuple[int, float]] = []
     for longitud in range(1, max_long + 1):
