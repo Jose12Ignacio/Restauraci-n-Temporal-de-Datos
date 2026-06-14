@@ -9,7 +9,7 @@ def construir_arbol(texto: str):
         frecuencias[ch] = frecuencias.get(ch, 0) + 1
     if len(frecuencias) == 1:
         (unico_char, frec), = frecuencias.items()
-        hoja = {"valor": unico_char, "frecuencias": frec, 
+        hoja = {"valor": unico_char, "frecuencia": frec, 
                 "izquierda": None, "derecha": None}
         return {"valor": None, "frecuencia": frec,
                 "izquierda": hoja, "derecha": None}

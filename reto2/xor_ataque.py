@@ -1,13 +1,11 @@
 from collections import namedtuple
 from typing import List, Tuple, Optional
-from reto2.longitud_clave import estimar_long_clave
+from reto2.longitud_clave import estimar_longitud_clave
 
 
 #se da el resultado
-ResultadoAtaque = namedtuple(
-    "ResultadoAtaque",
-    ["clave", "texto", "confianza", "long_clave"],
-)
+ResultadoAtaque = namedtuple("ResultadoAtaque", ["clave", "texto", "confianza", "longitud_clave"])
+
 
 #constantes de frecuencia
 
@@ -65,16 +63,15 @@ def aplicar_xor(datos: bytes, clave: bytes):
 
 #evalua la legibilidad
 def puntuacion_legibilidad(texto: bytes):
-
     if not texto:
         return 0.0
-    
     try:
         cadena = texto.decode("utf-8")
     except UnicodeDecodeError:
-        #cuenta solo bytes en el rango ASCII
         legibles = sum(1 for b in texto if 32 <= b < 127 or b in (9, 10, 13))
-        return legibles / len(cadena)
+        return legibles / len(texto) 
+    legibles = sum(1 for c in cadena if c in chars_legibles)
+    return legibles / len(cadena)
     
 
 #funcion principal
@@ -83,10 +80,10 @@ def atacar(cifrado: bytes, max_long: int = mejores_longitudes):
     if not cifrado:
         raise ValueError("el cifrado no puede estar vacio")
     
-    candidatos = estimar_long_clave(cifrado)
+    candidatos = estimar_longitud_clave(cifrado)
     mejores = candidatos[:max_long]
 
-    mejor_resultado = Optional(ResultadoAtaque) = None
+    mejor_resultado = None
 
     for longitud, score_ic in mejores:
         clave_bytes = recuperar_clave(cifrado, longitud)
@@ -110,7 +107,7 @@ def atacar(cifrado: bytes, max_long: int = mejores_longitudes):
             clave=clave_str,
             texto=texto_str,
             confianza=confianza,
-            long_clave=longitud,
+            longitud_clave=longitud,
         )
 
         if mejor_resultado is None or confianza > mejor_resultado.confianza:

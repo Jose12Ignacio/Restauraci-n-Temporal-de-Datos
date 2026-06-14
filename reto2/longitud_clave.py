@@ -25,14 +25,14 @@ def ic_promedio(cifrado: bytes, longitud: int):
         return 0.0
     return sum(ics) / len(ics)
 
-def estimar_long_clave(cifrado: bytes, max_long: int = 10):
+def estimar_longitud_clave(cifrado: bytes, max_longitud: int = 10):
     
-    max_long = min(max_long, 10)  #restringe la clave a 10 o menos
-    max_long = min(max_long, len(cifrado) // 2)  #suficientes datos necesarios
-    max_long = min(max_long, 1)
-
+    max_longitud = min(max_longitud, 10)
+    max_longitud = min(max_longitud, len(cifrado) // 2)
+    max_longitud = max(max_longitud, 1)
+    
     resultados: List[Tuple[int, float]] = []
-    for longitud in range(1, max_long + 1):
+    for longitud in range(1, max_longitud + 1):
         score = ic_promedio(cifrado, longitud)
         resultados.append((longitud, score))
 
