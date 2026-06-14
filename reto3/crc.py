@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 def calcular_crc16(datos):
     crc = 0xFFFF
     polinomio = 0x1021

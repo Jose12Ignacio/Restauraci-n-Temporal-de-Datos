@@ -1,5 +1,6 @@
+from pathlib import Path
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog
 from Menu import MenuLogico
 
 
@@ -15,6 +16,7 @@ class InterfazProyecto:
         self.menu_logico = MenuLogico()
 
         self.ruta_archivo = tk.StringVar()
+        self.ruta_crc = tk.StringVar()
         self.clave_xor = tk.StringVar()
         self.algoritmo_compresion = tk.StringVar(value="Huffman")
         self.tipo_error = tk.StringVar(value="Single-bit error")
@@ -144,6 +146,29 @@ class InterfazProyecto:
             text="Verificar CRC",
             command=self.verificar_crc
         ).grid(row=0, column=4, padx=5)
+        tk.Button(
+            frame,
+            text="Buscar CRC original",
+            command=self.buscar_crc
+        ).grid(row=1, column=0, padx=5, pady=5)
+
+        tk.Button(
+            frame,
+            text="Corregir con CRC",
+            command=self.corregir_con_crc
+        ).grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Button(
+            frame,
+            text="Recuperar sin CRC",
+            command=self.recuperar_sin_crc
+        ).grid(row=1, column=2, padx=5, pady=5)
+
+        tk.Button(
+            frame,
+            text="Guardar como",
+            command=self.guardar_como
+        ).grid(row=1, column=3, padx=5, pady=5)
 
     def crear_salida(self):
         frame = tk.LabelFrame(self.ventana, text="Salida del programa")
@@ -196,10 +221,16 @@ class InterfazProyecto:
     def corromper(self):
         tipo_error = self.tipo_error.get()
         mensaje = self.menu_logico.corromper_archivo(tipo_error)
+
+        if self.menu_logico.archivo_actual:
+            self.ruta_archivo.set(self.menu_logico.archivo_actual)
+
         self.mostrar_mensaje(mensaje)
 
     def generar_crc(self):
         mensaje = self.menu_logico.generar_crc()
+        if self.menu_logico.archivo_actual:
+            self.ruta_archivo.set(self.menu_logico.archivo_actual)
         self.mostrar_mensaje(mensaje)
 
     def verificar_crc(self):
@@ -214,8 +245,72 @@ class InterfazProyecto:
 
     def limpiar_busqueda(self):
         self.ruta_archivo.set("")
+        self.ruta_crc.set("")
         mensaje = self.menu_logico.limpiar_busqueda()
         self.mostrar_mensaje(mensaje)
+
+    def buscar_crc(self):
+        ruta = filedialog.askopenfilename(
+            title="Seleccionar archivo CRC original",
+            filetypes=[
+                ("Archivos CRC", "*.crc"),
+                ("Archivos de texto", "*.txt"),
+                ("Todos los archivos", "*.*")
+            ]
+        )
+
+        if ruta:
+            self.ruta_crc.set(ruta)
+            self.mostrar_mensaje(f"CRC original seleccionado:\n{ruta}")
+
+
+    def corregir_con_crc(self):
+        ruta_crc = self.ruta_crc.get()
+
+        mensaje = self.menu_logico.corregir_archivo_con_crc(
+            ruta_crc,
+            max_bits_rafaga=16
+        )
+
+        if self.menu_logico.archivo_actual:
+            self.ruta_archivo.set(self.menu_logico.archivo_actual)
+
+        self.mostrar_mensaje(mensaje)
+
+
+    def recuperar_sin_crc(self):
+        mensaje = self.menu_logico.recuperar_sin_crc()
+
+        if self.menu_logico.archivo_actual:
+            self.ruta_archivo.set(self.menu_logico.archivo_actual)
+
+        self.mostrar_mensaje(mensaje)
+
+
+    def guardar_como(self):
+        ruta_actual = self.menu_logico.archivo_actual
+
+        if not ruta_actual:
+            self.mostrar_mensaje("Primero debe seleccionar o generar un archivo.")
+            return
+
+        archivo = Path(ruta_actual)
+
+        ruta_destino = filedialog.asksaveasfilename(
+            title="Guardar archivo como",
+            initialfile=archivo.name,
+            defaultextension=archivo.suffix,
+            filetypes=[
+                ("Todos los archivos", "*.*"),
+                ("Archivos de texto", "*.txt"),
+                ("Archivos binarios", "*.bin"),
+                ("Archivos CRC", "*.crc")
+            ]
+        )
+
+        if ruta_destino:
+            mensaje = self.menu_logico.guardar_como(ruta_destino)
+            self.mostrar_mensaje(mensaje)
 
     def ejecutar(self):
         self.ventana.mainloop()
