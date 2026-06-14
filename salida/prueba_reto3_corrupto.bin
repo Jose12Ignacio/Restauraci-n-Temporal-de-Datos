@@ -1,0 +1,4 @@
+Archivo original para prueba de deteccion y correccion dm errores CRC.
+Este texto sera corrompido con un error de un bit o burst error.
+El programa debe detectar el error y corregirlo usando el CRC original.
+Verificacion de integridad en transmision de datos binarios.

@@ -1,6 +1,6 @@
 from collections import namedtuple
 from typing import List, Tuple, Optional
-from reto2.longitud_clave import estimar_long_clave
+from reto2.longitud_clave import estimar_longitud_clave
 
 
 #se da el resultado
@@ -80,7 +80,7 @@ def atacar(cifrado: bytes, max_long: int = mejores_longitudes):
     if not cifrado:
         raise ValueError("el cifrado no puede estar vacio")
     
-    candidatos = estimar_long_clave(cifrado)
+    candidatos = estimar_longitud_clave(cifrado)
     mejores = candidatos[:max_long]
 
     mejor_resultado = None
