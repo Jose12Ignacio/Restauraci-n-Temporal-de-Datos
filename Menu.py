@@ -4,6 +4,8 @@ from common.funciones import leer_texto, guardar_texto, leer_bytes, guardar_byte
 from common.formato import bytes_a_binario, binario_a_bytes, limpiar_espacios_binario
 from reto1.compress import comprimir
 from reto1.decompress import descomprimir
+from reto1.huffman import construir_arbol, construir_tabla, codificar
+from reto1.lzw import comprimir_lzw
 from reto2.xor_cifrador import cifrar, descifrar
 from reto2.xor_ataque import atacar
 from reto3.crc import calcular_crc16, guardar_crc, leer_crc, verificar_crc
@@ -46,8 +48,18 @@ class MenuLogico:
             ruta_salida = self.archivo_actual + ".reto1.json"
             guardar_texto(ruta_salida, json.dumps(resultado, indent=2, ensure_ascii=False))
 
-            return f"Archivo comprimido guardado en:\n{ruta_salida}"
-
+            if algoritmo.lower() == "huffman":
+                arbol = construir_arbol(texto)
+                tabla = construir_tabla(arbol)
+                bits = codificar(texto, tabla)
+                vista_previa = f"Bits comprimidos: {bits[:60]}..."
+            else:
+                salida, _ = comprimir_lzw(texto)
+                vista_previa = f"Códigos LZW: {salida[:10]}..."
+            
+            return (f"{vista_previa}\n\n"
+                    f"Archivo comprimido guardado en:\n{ruta_salida}")
+            
         except Exception as e:
             return f"Error al comprimir: {e}"
         
@@ -107,7 +119,9 @@ class MenuLogico:
             ruta_salida = self.archivo_actual + ".json"
             guardar_texto(ruta_salida, json.dumps(resultado, indent=2))
 
-            return f"Archivo cifrado guardado en:\n{ruta_salida}"
+            return (f"Clave usada: {clave}\n"
+                    f"Bits cifrados: {bits[:40]}...\n\n"
+                    f"Archivo cifrado guardado en:\n{ruta_salida}")
 
         except ValueError as e:
             return f"Error de validación: {e}"
@@ -138,11 +152,12 @@ class MenuLogico:
                 clave_encontrada = resultado.clave
                 info = (f"Ataque automático completado.\n"
                         f"Clave encontrada: {clave_encontrada}\n"
-                        f"Confianza: {confianza:.0%}\n"
+                        f"Confianza: {confianza:.0%}\n\n"
                         f"Texto recuperado:\n{texto_recuperado}")
             else:
                 texto_recuperado = descifrar(cifrado, clave)
-                info = f"Texto descifrado:\n{texto_recuperado}"
+                info = (f"Clave usada: {clave}\n\n"
+                        f"Texto descifrado:\n{texto_recuperado}")
     
             ruta_salida = self.archivo_actual.replace(".json", "") + ".dec.txt"
             guardar_texto(ruta_salida, texto_recuperado)
@@ -203,10 +218,11 @@ class MenuLogico:
             ruta_salida = self.archivo_actual + ".reto3.json"
             guardar_texto(ruta_salida, json.dumps(resultado, indent=2))
             
+            extracto_texto = '\n'.join(extracto_pantalla)
             msg_exito = (
                 f"Estructura de verificación generada con éxito en:\n{ruta_salida}\n\n"
                 f"Extracto de Sumatorias Originales (Primeros bloques):\n"
-                f"{'\n'.join(extracto_pantalla)}\n"
+                f"{extracto_texto}\n"
                 f"  ... (+ {len(datos_bytes) - min(len(datos_bytes), 5)} bloques guardados en el JSON)."
             )
             return msg_exito
@@ -296,10 +312,11 @@ class MenuLogico:
             if not bloques_corruptos_info:
                 return " Integridad Perfecta: Todos los segmentos coinciden con sus sumatorias correctas."
             else:
+                detalle_bloques = '\n'.join(bloques_corruptos_info)
                 reporte_fallo = (
                     f" Inconsistencia Detectada en la Línea Temporal:\n"
                     f"==================================================\n"
-                    f"{'\n'.join(bloques_corruptos_info)}\n"
+                    f"{detalle_bloques}\n"
                     f"=================================================="
                 )
                 return reporte_fallo
