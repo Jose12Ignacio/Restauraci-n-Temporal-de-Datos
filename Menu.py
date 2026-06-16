@@ -178,7 +178,7 @@ class MenuLogico:
         """
         Genera el archivo JSON estructurado por segmentos con sus respectivas
         sumatorias (CRC) correctas antes de ser corrompido, usando bloques de 8 bits.
-         Muestra un extracto de los CRC generados originalmente.
+        Muestra un extracto de los CRC generados originalmente.
         """
         valido, mensaje = self.validar_archivo()
         if not valido:
@@ -203,7 +203,6 @@ class MenuLogico:
                     "checksum": crc_segmento  
                 })
                 
-                # Guardamos los primeros 5 bloques para mostrarlos como muestra en la interfaz
                 if idx < 5:
                     extracto_pantalla.append(f"  • Bloque {idx+1} ('{chr(byte)}'): CRC 0x{crc_segmento:04X}")
 
@@ -218,11 +217,10 @@ class MenuLogico:
             ruta_salida = self.archivo_actual + ".reto3.json"
             guardar_texto(ruta_salida, json.dumps(resultado, indent=2))
             
-            extracto_texto = '\n'.join(extracto_pantalla)
             msg_exito = (
-                f"Estructura de verificación generada con éxito en:\n{ruta_salida}\n\n"
-                f"Extracto de Sumatorias Originales (Primeros bloques):\n"
-                f"{extracto_texto}\n"
+                f" Estructura de verificación generada con éxito en:\n{ruta_salida}\n\n"
+                f" Extracto de Sumatorias Originales (Primeros bloques):\n"
+                f"{'\n'.join(extracto_pantalla)}\n"
                 f"  ... (+ {len(datos_bytes) - min(len(datos_bytes), 5)} bloques guardados en el JSON)."
             )
             return msg_exito
@@ -232,8 +230,8 @@ class MenuLogico:
 
     def corromper_archivo(self, tipo_error):
         """
-        Toma un JSON estructurado de Reto 3 e inyecta un error de bit o de ráfaga
-        únicamente en las cadenas binarias, preservando los checksums correctos.
+        Lógica Avanzada: Convierte TODO el archivo a una tira continua de bytes
+        para que el Burst Error pueda propagarse libremente a través de múltiples IDs (bloques).
         """
         valido, mensaje = self.validar_archivo()
         if not valido:
@@ -249,26 +247,54 @@ class MenuLogico:
             if "data" not in datos_json:
                 return "Error: El JSON no contiene la sección de segmentos ('data')."
 
-            import random
             segmentos = datos_json["data"]
             
-            seg_elegido = random.choice(segmentos)
-            bits_originales = seg_elegido["bits"]
-            datos_bytes = binario_a_bytes(bits_originales)
-
+            # 1. Reconstruir TODOS los bytes del archivo en un solo array continuo
+            bytes_completos = bytearray()
+            for seg in segmentos:
+                bytes_completos.extend(binario_a_bytes(seg["bits"]))
+            
+            # 2. Aplicar el error sobre el archivo completo
             if tipo_error == "Single-bit error":
-                datos_corruptos, info = insertar_error_un_bit(datos_bytes)
-                msg_detalle = f"Bit invertido en la posición {info['posicion_bit']} del bloque ID {seg_elegido['id']}."
+                # Altera solo 1 bit en todo el archivo (afectará a 1 ID)
+                datos_corruptos, info = insertar_error_un_bit(bytes(bytes_completos))
+                
+                # Averiguar cuál ID se vio afectado mapeando la posición del byte
+                id_afectado = info["indice_byte"] + 1
+                msg_detalle = f"Bit invertido en la posición {info['posicion_bit']} del bloque ID {id_afectado}."
             else:
-                datos_corruptos, info = insertar_error_burst(datos_bytes, cantidad_bits=4)
-                msg_detalle = f"Ráfaga de error aplicada a partir del bit {info.get('inicio_bit', 0)} en el bloque ID {seg_elegido['id']}."
+                # Burst error: Definimos una ráfaga larga (ej: 16 bits = 2 bytes completos de daño secuencial)
+                # Esto garantiza que destruirá bits que cruzaran entre 2 o 3 bloques seguidos
+                datos_corruptos, info = insertar_error_burst(bytes(bytes_completos), cantidad_bits=16)
+                
+                # Averiguar el rango de IDs afectados
+                id_inicio = (info["inicio_bit"] // 8) + 1
+                id_fin = ((info["inicio_bit"] + info["cantidad_bits"] - 1) // 8) + 1
+                
+                if id_inicio == id_fin:
+                    msg_detalle = f"Ráfaga de error aplicada en el bloque ID {id_inicio} (No logró cruzar la frontera del byte)."
+                else:
+                    msg_detalle = f" Ráfaga destructiva propagada secuencialmente a través de los bloques desde el ID {id_inicio} hasta el ID {id_fin}."
 
-            seg_elegido["bits"] = bytes_a_binario(datos_corruptos).replace(" ", "")
+            # 3. Repartir los bytes ya corrompidos de vuelta a cada bloque del JSON
+            for idx, seg in enumerate(segmentos):
+                byte_modificado = datos_corruptos[idx]
+                seg["bits"] = format(byte_modificado, "08b")
 
-            ruta_salida = self.archivo_actual.replace(".json", "") + ".corrupto.json"
-            guardar_texto(ruta_salida, json.dumps(datos_json, indent=2))
+            # --- LÓGICA DE EXPORTACIÓN DEL ARCHIVO .BIN PARALELO ---
+            ruta_bin_salida = self.archivo_actual.replace(".json", "") + ".corrupto.bin"
+            guardar_bytes(ruta_bin_salida, datos_corruptos)
+            # ---------------------------------------------------------------------
 
-            return f"Ruido temporal inyectado ({tipo_error}).\n{msg_detalle}\nGuardado en: {ruta_salida}"
+            # Guardar el JSON modificado para el torneo
+            ruta_salida_json = self.archivo_actual.replace(".json", "") + ".corrupto.json"
+            guardar_texto(ruta_salida_json, json.dumps(datos_json, indent=2))
+
+            return (
+                f" Ruido temporal inyectado ({tipo_error}).\n{msg_detalle}\n\n"
+                f" Archivo JSON (Torneo) guardado en:\n{ruta_salida_json}\n\n"
+                f" Archivo Binario Puro (.bin) guardado en:\n{ruta_bin_salida}"
+            )
 
         except Exception as e:
             return f"Error al corromper el segmento: {e}"
@@ -298,11 +324,8 @@ class MenuLogico:
                 datos_bytes = binario_a_bytes(seg["bits"])
                 crc_esperado = seg.get("checksum", seg.get("residuo_crc", 0))
                 
-                # Calcular código actual sobre los bits que están cargados en el archivo
                 crc_actual = calcular_crc16(datos_bytes)
-                
                 if crc_actual != crc_esperado:
-                    # Guardamos el ID junto con la comparativa visual de los dos CRCs en Hexadecimal
                     bloques_corruptos_info.append(
                         f"  -> Bloque ID {seg['id']}:\n"
                         f"     [CRC Original Esperado]: 0x{crc_esperado:04X} ({crc_esperado})\n"
@@ -310,13 +333,12 @@ class MenuLogico:
                     )
 
             if not bloques_corruptos_info:
-                return " Integridad Perfecta: Todos los segmentos coinciden con sus sumatorias correctas."
+                return "Integridad Perfecta: Todos los segmentos coinciden con sus sumatorias correctas."
             else:
-                detalle_bloques = '\n'.join(bloques_corruptos_info)
                 reporte_fallo = (
                     f" Inconsistencia Detectada en la Línea Temporal:\n"
                     f"==================================================\n"
-                    f"{detalle_bloques}\n"
+                    f"{'\n'.join(bloques_corruptos_info)}\n"
                     f"=================================================="
                 )
                 return reporte_fallo
@@ -347,21 +369,17 @@ class MenuLogico:
             if not segmentos:
                 return "Error: No se encontró la lista de segmentos ('data') en el archivo."
 
-            # Llamada a la función segmentada de correccion.py
             datos_sanos, sanos, corregidos, fallidos = corregir_datos_segmentados(segmentos, max_bits_rafaga)
 
             ruta_salida = self.archivo_actual.replace(".json", "") + ".restaurado.txt"
             
-            # Decodificar de forma segura la tira completa de bytes
             try:
                 texto_limpio = datos_sanos.decode('utf-8')
             except UnicodeDecodeError:
                 texto_limpio = datos_sanos.decode('latin-1')
 
-            # Guardar en disco duro el archivo corregido
             guardar_texto(ruta_salida, texto_limpio)
 
-            # --- AQUÍ AGREGAMOS EL MENSAJE NORMAL AL REPORTE ---
             reporte = (
                 f"--- Reporte del Torneo (Reto 3) ---\n"
                 f"Tamaño de segmento: {bits_por_segmento} bits.\n"

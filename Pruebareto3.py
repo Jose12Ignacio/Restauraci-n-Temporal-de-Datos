@@ -1,7 +1,7 @@
 from common.funciones import guardar_bytes, leer_bytes, guardar_texto
 from reto3.crc import calcular_crc16, guardar_crc, leer_crc, verificar_crc
 from reto3.injector import insertar_error_un_bit
-from reto3.Correcion import intentar_corregir_un_bit
+from reto3.correccion import intentar_corregir_un_bit
 
 
 def main():
