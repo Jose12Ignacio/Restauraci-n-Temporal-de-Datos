@@ -64,8 +64,8 @@ def _despiste_lzw(texto: str):
 def comprimir(texto: str, algoritmo: str):
     algoritmo = algoritmo.lower().strip()
     
-    if algoritmo not in ("huffman", "lzw"):
-        raise ValueError("Algoritmo no soportado. Usa 'huffman' o 'lzw'.")
+    if algoritmo not in ("huffman", "lzw", "lz77", "lz78"):
+        raise ValueError("Algoritmo no soportado. Usa 'huffman', 'lzw', 'lz77' o 'lz78'.")
     compresion = []
 
     if algoritmo == "huffman":
