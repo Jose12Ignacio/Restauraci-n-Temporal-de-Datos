@@ -217,10 +217,11 @@ class MenuLogico:
             ruta_salida = self.archivo_actual + ".reto3.json"
             guardar_texto(ruta_salida, json.dumps(resultado, indent=2))
             
+            extracto_texto = '\n'.join(extracto_pantalla)
             msg_exito = (
                 f" Estructura de verificación generada con éxito en:\n{ruta_salida}\n\n"
                 f" Extracto de Sumatorias Originales (Primeros bloques):\n"
-                f"{'\n'.join(extracto_pantalla)}\n"
+                f"{extracto_texto}\n"
                 f"  ... (+ {len(datos_bytes) - min(len(datos_bytes), 5)} bloques guardados en el JSON)."
             )
             return msg_exito
@@ -335,10 +336,11 @@ class MenuLogico:
             if not bloques_corruptos_info:
                 return "Integridad Perfecta: Todos los segmentos coinciden con sus sumatorias correctas."
             else:
+                detalle_bloques = '\n'.join(bloques_corruptos_info)
                 reporte_fallo = (
                     f" Inconsistencia Detectada en la Línea Temporal:\n"
                     f"==================================================\n"
-                    f"{'\n'.join(bloques_corruptos_info)}\n"
+                    f"{detalle_bloques}\n"
                     f"=================================================="
                 )
                 return reporte_fallo
