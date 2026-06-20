@@ -1,5 +1,7 @@
 from reto1.huffman import construir_arbol, construir_tabla, codificar
 from reto1.lzw import comprimir_lzw
+from reto1.lz77 import comprimir_lz77
+from reto1.lz78 import comprimir_lz78
 
 def _despiste_huffman(texto: str):
     if texto == "":
@@ -66,44 +68,36 @@ def comprimir(texto: str, algoritmo: str):
     
     if algoritmo not in ("huffman", "lzw", "lz77", "lz78"):
         raise ValueError("Algoritmo no soportado. Usa 'huffman', 'lzw', 'lz77' o 'lz78'.")
+    
     compresion = []
 
     if algoritmo == "huffman":
         arbol = construir_arbol(texto)
         tabla = construir_tabla(arbol)
         codigo = codificar(texto, tabla)
-        estructura_huffman = {
-            "arbol": arbol,
-            "tabla_codigos": tabla,
-            "salida": codigo,
-        }
+        estructura_huffman = {"arbol": arbol, "tabla_codigos": tabla, "salida": codigo}
     else:
         estructura_huffman = _despiste_huffman(texto)
-    
-    compresion.append({
-        "algoritmo": "Huffman",
-        "estructura": estructura_huffman,
-    })
+    compresion.append({"algoritmo": "Huffman", "estructura": estructura_huffman})
 
-    compresion.append({
-        "algoritmo": "LZ78",
-        "estructura": _despiste_lz78(texto),
-    })
+    if algoritmo == "lz77":
+        estructura_lz77 = comprimir_lz77(texto)
+    else:
+        estructura_lz77 = _despiste_lz77(texto)
+    compresion.append({"algoritmo": "LZ77", "estructura": estructura_lz77})
+
+    if algoritmo == "lz78":
+        estructura_lz78 = comprimir_lz78(texto)
+    else:
+        estructura_lz78 = _despiste_lz78(texto)
+    compresion.append({"algoritmo": "LZ78", "estructura": estructura_lz78})
 
     if algoritmo == "lzw":
         salida, diccionario_generado = comprimir_lzw(texto)
         diccionario_inicial = {ch: ord(ch) for ch in set(texto)} if texto else {}
-        estructura_lzw = {
-            "diccionario_inicial": diccionario_inicial,
-            "diccionario_generado": diccionario_generado,
-            "salida": salida,
-        }
+        estructura_lzw = {"diccionario_inicial": diccionario_inicial, "diccionario_generado": diccionario_generado, "salida": salida}
     else:
         estructura_lzw = _despiste_lzw(texto)
-
-    compresion.append({
-        "algoritmo": "LZW",
-        "estructura": estructura_lzw,
-    })
+    compresion.append({"algoritmo": "LZW", "estructura": estructura_lzw})
 
     return {"compresion": compresion}
