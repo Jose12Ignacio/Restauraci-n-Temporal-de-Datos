@@ -15,7 +15,7 @@ def comprimir_lz77(texto: str, buffer_busqueda: int = 10, buffer_lectura: int = 
                 break
         siguiente = texto[i + mejor_longitud] if i + mejor_longitud < len(texto) else ""
         tripletas.append({
-            "offset": mejor_offset,
+            "offset": "_" if mejor_offset == 0 and mejor_longitud == 0 else mejor_offset,
             "longitud": mejor_longitud,
             "siguiente": siguiente
         })
@@ -33,7 +33,7 @@ def descomprimir_lz77(estructura: dict) -> str:
         offset = t["offset"]
         longitud = t["longitud"]
         siguiente = t["siguiente"]
-        if offset > 0 and longitud > 0:
+        if offset != "_" and offset > 0 and longitud > 0:
             inicio = len(resultado) - offset
             for j in range(longitud):
                 resultado.append(resultado[inicio + j])
