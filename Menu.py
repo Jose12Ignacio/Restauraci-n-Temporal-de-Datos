@@ -31,9 +31,8 @@ class MenuLogico:
             return False, "Primero debe seleccionar un archivo."
         return True, "Archivo válido."
 
-    # =========================================================================
+    
     # RETO 1: COMPRESIÓN Y DESCOMPRESIÓN
-    # =========================================================================
     def comprimir_archivo(self, algoritmo):
         valido, mensaje = self.validar_archivo()
         if not valido:
@@ -80,13 +79,10 @@ class MenuLogico:
             return mensaje
 
         try:
-            from common.funciones import leer_texto, guardar_texto
-            from reto1.decompress import descomprimir
-            import json
+            from common.funciones import guardar_texto
+            from reto1.reader import leer_y_descomprimir
 
-            contenido = leer_texto(self.archivo_actual)
-            json_data = json.loads(contenido)
-            texto_recuperado = descomprimir(json_data, algoritmo)
+            texto_recuperado = leer_y_descomprimir(self.archivo_actual, algoritmo)
 
             ruta_salida = self.archivo_actual.replace(".reto1.json", "") + ".dec.txt"
             guardar_texto(ruta_salida, texto_recuperado)
@@ -94,11 +90,10 @@ class MenuLogico:
             return f"Texto descomprimido:\n{texto_recuperado}\n\nGuardado en: {ruta_salida}"
 
         except Exception as e:
-            return f"Error al dscifrar o descomprimir: {e}"
+            return f"Error al descifrar o descomprimir: {e}"
 
-    # =========================================================================
+    
     # RETO 2: CIFRADO Y ATAQUES XOR
-    # =========================================================================
     def cifrar_xor(self, clave: str) -> str:
         valido, mensaje = self.validar_archivo()
         if not valido:
@@ -184,9 +179,8 @@ class MenuLogico:
         except Exception as e:
             return f"Error al descifrar: {e}"
 
-    # =========================================================================
+    
     # RETO 3: ARCHIVO CORRUPTO (SEGMENTACIÓN Y VERIFICACIÓN)
-    # =========================================================================
     def generar_crc(self):
         """
         Genera el archivo JSON estructurado por segmentos con sus respectivas
@@ -295,10 +289,10 @@ class MenuLogico:
                 byte_modificado = datos_corruptos[idx]
                 seg["bits"] = format(byte_modificado, "08b")
 
-            # --- LÓGICA DE EXPORTACIÓN DEL ARCHIVO .BIN PARALELO ---
+            #LÓGICA DE EXPORTACIÓN DEL ARCHIVO .BIN PARALELO
             ruta_bin_salida = self.archivo_actual.replace(".json", "") + ".corrupto.bin"
             guardar_bytes(ruta_bin_salida, datos_corruptos)
-            # ---------------------------------------------------------------------
+            
 
             # Guardar el JSON modificado para el torneo
             ruta_salida_json = self.archivo_actual.replace(".json", "") + ".corrupto.json"
@@ -412,9 +406,8 @@ class MenuLogico:
         except Exception as e:
             return f"Error crítico durante el proceso de restauración: {e}"
 
-    # =========================================================================
+    
     # FUNCIÓN DE ANÁLISIS DE ENTRADA (DETECCIÓN DE FORMATO)
-    # =========================================================================
     def cargar_y_procesar_json(self):
         valido, mensaje = self.validar_archivo()
         if not valido:
