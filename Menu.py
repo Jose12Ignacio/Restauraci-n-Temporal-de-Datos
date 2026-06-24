@@ -31,7 +31,7 @@ class MenuLogico:
             return False, "Primero debe seleccionar un archivo."
         return True, "Archivo válido."
 
-    
+
     # RETO 1: COMPRESIÓN Y DESCOMPRESIÓN
     def comprimir_archivo(self, algoritmo):
         valido, mensaje = self.validar_archivo()
@@ -56,20 +56,31 @@ class MenuLogico:
                 arbol = construir_arbol(texto)
                 tabla = construir_tabla(arbol)
                 bits = codificar(texto, tabla)
+                ruta_bin = self.archivo_actual + ".reto1.bin"
+                guardar_bytes(ruta_bin, bits.encode('ascii'))
                 vista_previa = f"Bits comprimidos: {bits[:60]}..."
             elif algoritmo.lower() == "lzw":
                 salida, _ = comprimir_lzw(texto)
+                ruta_bin = self.archivo_actual + ".reto1.bin"
+                guardar_bytes(ruta_bin, ' '.join(str(c) for c in salida).encode('ascii'))
                 vista_previa = f"Códigos LZW: {salida[:10]}..."
             elif algoritmo.lower() == "lz77":
+                ruta_bin = self.archivo_actual + ".reto1.bin"
+                guardar_bytes(ruta_bin, json.dumps(resultado).encode('ascii'))
                 vista_previa = "Algoritmo: LZ77 (compresión por tripletas offset-longitud-siguiente)"
             elif algoritmo.lower() == "lz78":
+                ruta_bin = self.archivo_actual + ".reto1.bin"
+                guardar_bytes(ruta_bin, json.dumps(resultado).encode('ascii'))
                 vista_previa = "Algoritmo: LZ78 (compresión por diccionario incremental)"
             else:
+                ruta_bin = self.archivo_actual + ".reto1.bin"
+                guardar_bytes(ruta_bin, json.dumps(resultado).encode('ascii'))
                 vista_previa = f"Algoritmo: {algoritmo.upper()}"
-            
+
             return (f"{vista_previa}\n\n"
-                    f"Archivo comprimido guardado en:\n{ruta_salida}")
-            
+                    f"Archivo comprimido guardado en:\n{ruta_salida}\n"
+                    f"Archivo binario guardado en:\n{ruta_bin}")
+
         except Exception as e:
             return f"Error al comprimir: {e}"
         
@@ -79,10 +90,13 @@ class MenuLogico:
             return mensaje
 
         try:
-            from common.funciones import guardar_texto
-            from reto1.reader import leer_y_descomprimir
+            from common.funciones import leer_texto, guardar_texto
+            from reto1.decompress import descomprimir
+            import json
 
-            texto_recuperado = leer_y_descomprimir(self.archivo_actual, algoritmo)
+            contenido = leer_texto(self.archivo_actual)
+            json_data = json.loads(contenido)
+            texto_recuperado = descomprimir(json_data, algoritmo)
 
             ruta_salida = self.archivo_actual.replace(".reto1.json", "") + ".dec.txt"
             guardar_texto(ruta_salida, texto_recuperado)
@@ -90,7 +104,7 @@ class MenuLogico:
             return f"Texto descomprimido:\n{texto_recuperado}\n\nGuardado en: {ruta_salida}"
 
         except Exception as e:
-            return f"Error al descifrar o descomprimir: {e}"
+            return f"Error al dscifrar o descomprimir: {e}"
 
     
     # RETO 2: CIFRADO Y ATAQUES XOR
@@ -127,9 +141,13 @@ class MenuLogico:
             ruta_salida = self.archivo_actual + ".json"
             guardar_texto(ruta_salida, json.dumps(resultado, indent=2))
 
+            ruta_bin = self.archivo_actual + ".xor.bin"
+            guardar_bytes(ruta_bin, datos_cifrados)
+
             return (f"Clave usada: {clave}\n"
                     f"Bits cifrados: {bits[:40]}...\n\n"
-                    f"Archivo cifrado guardado en:\n{ruta_salida}")
+                    f"Archivo cifrado guardado en:\n{ruta_salida}\n"
+                    f"Archivo binario guardado en:\n{ruta_bin}")
 
         except ValueError as e:
             return f"Error de validación: {e}"
@@ -148,10 +166,13 @@ class MenuLogico:
             from reto2.xor_ataque import atacar
             import json
     
-            contenido = leer_texto(self.archivo_actual)
-            datos = json.loads(contenido)
-            bits = limpiar_espacios_binario(datos["ciphertext"][0])
-            cifrado = binario_a_bytes(bits)
+            if self.archivo_actual.endswith('.bin'):
+                cifrado = leer_bytes(self.archivo_actual)
+            else:
+                contenido = leer_texto(self.archivo_actual)
+                datos = json.loads(contenido)
+                bits = limpiar_espacios_binario(datos["ciphertext"][0])
+                cifrado = binario_a_bytes(bits)
     
             if clave == "":
                 resultado = atacar(cifrado)
@@ -167,7 +188,10 @@ class MenuLogico:
                 info = (f"Clave usada: {clave}\n\n"
                         f"Texto descifrado:\n{texto_recuperado}")
     
-            ruta_salida = self.archivo_actual.replace(".json", "") + ".dec.txt"
+            if self.archivo_actual.endswith('.bin'):
+                ruta_salida = self.archivo_actual.replace(".bin", "") + ".dec.txt"
+            else:
+                ruta_salida = self.archivo_actual.replace(".json", "") + ".dec.txt"
             guardar_texto(ruta_salida, texto_recuperado)
     
             return info + f"\n\nGuardado en: {ruta_salida}"
@@ -179,7 +203,7 @@ class MenuLogico:
         except Exception as e:
             return f"Error al descifrar: {e}"
 
-    
+   
     # RETO 3: ARCHIVO CORRUPTO (SEGMENTACIÓN Y VERIFICACIÓN)
     def generar_crc(self):
         """
@@ -289,10 +313,10 @@ class MenuLogico:
                 byte_modificado = datos_corruptos[idx]
                 seg["bits"] = format(byte_modificado, "08b")
 
-            #LÓGICA DE EXPORTACIÓN DEL ARCHIVO .BIN PARALELO
+            # --- LÓGICA DE EXPORTACIÓN DEL ARCHIVO .BIN PARALELO ---
             ruta_bin_salida = self.archivo_actual.replace(".json", "") + ".corrupto.bin"
             guardar_bytes(ruta_bin_salida, datos_corruptos)
-            
+            # ---------------------------------------------------------------------
 
             # Guardar el JSON modificado para el torneo
             ruta_salida_json = self.archivo_actual.replace(".json", "") + ".corrupto.json"
@@ -406,8 +430,9 @@ class MenuLogico:
         except Exception as e:
             return f"Error crítico durante el proceso de restauración: {e}"
 
-    
+    # =========================================================================
     # FUNCIÓN DE ANÁLISIS DE ENTRADA (DETECCIÓN DE FORMATO)
+    # =========================================================================
     def cargar_y_procesar_json(self):
         valido, mensaje = self.validar_archivo()
         if not valido:
