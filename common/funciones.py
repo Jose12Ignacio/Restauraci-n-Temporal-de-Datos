@@ -15,15 +15,13 @@ def validar_archivo(ruta):
 
 
 def leer_texto(ruta):
-    with open(ruta, "r", encoding="utf-8") as archivo:
+    with open(ruta, "r", encoding="ascii") as archivo:
         return archivo.read()
-
 
 def guardar_texto(ruta, contenido):
     ruta_archivo = Path(ruta)
     ruta_archivo.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(ruta, "w", encoding="utf-8") as archivo:
+    with open(ruta, "w", encoding="ascii") as archivo:
         archivo.write(contenido)
 
 

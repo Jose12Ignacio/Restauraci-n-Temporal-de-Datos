@@ -35,8 +35,8 @@ def cifrar (texto: str, clave: str):
     validarClave(clave)
     validarMensaje(len(texto), len(clave))
 
-    datos = texto.encode("utf-8")
-    clave_bytes = clave.encode("utf-8")
+    datos = texto.encode("ascii")
+    clave_bytes = clave.encode("ascii")
     return xor_con_clave(datos, clave_bytes)
 
 def descifrar (datos: bytes, clave: str):
@@ -45,7 +45,7 @@ def descifrar (datos: bytes, clave: str):
 
     clave_bytes = clave.encode ("utf-8")
     texto_bytes = xor_con_clave(datos, clave_bytes)
-    return texto_bytes.decode("utf-8")
+    return texto_bytes.decode("ascii")
 
 def guardar_cifrado (datos: bytes, ruta: str):
 
