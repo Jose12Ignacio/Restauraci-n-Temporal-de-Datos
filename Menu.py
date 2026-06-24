@@ -6,6 +6,8 @@ from reto1.compress import comprimir
 from reto1.decompress import descomprimir
 from reto1.huffman import construir_arbol, construir_tabla, codificar
 from reto1.lzw import comprimir_lzw
+from reto1.lz77 import comprimir_lz77
+from reto1.lz78 import comprimir_lz78
 from reto2.xor_cifrador import cifrar, descifrar
 from reto2.xor_ataque import atacar
 from reto3.crc import calcular_crc16, guardar_crc, leer_crc, verificar_crc
@@ -43,7 +45,10 @@ class MenuLogico:
             import json
 
             texto = leer_texto(self.archivo_actual)
+            if not all(ord(c) < 128 for c in texto):
+                return "Error: El archivo contiene caracteres especiales (tildes, n, etc). Use solo ASCII de 7 bits."
             resultado = comprimir(texto, algoritmo.lower())
+        
 
             ruta_salida = self.archivo_actual + ".reto1.json"
             guardar_texto(ruta_salida, json.dumps(resultado, indent=2, ensure_ascii=False))
@@ -53,9 +58,15 @@ class MenuLogico:
                 tabla = construir_tabla(arbol)
                 bits = codificar(texto, tabla)
                 vista_previa = f"Bits comprimidos: {bits[:60]}..."
-            else:
+            elif algoritmo.lower() == "lzw":
                 salida, _ = comprimir_lzw(texto)
                 vista_previa = f"Códigos LZW: {salida[:10]}..."
+            elif algoritmo.lower() == "lz77":
+                vista_previa = "Algoritmo: LZ77 (compresión por tripletas offset-longitud-siguiente)"
+            elif algoritmo.lower() == "lz78":
+                vista_previa = "Algoritmo: LZ78 (compresión por diccionario incremental)"
+            else:
+                vista_previa = f"Algoritmo: {algoritmo.upper()}"
             
             return (f"{vista_previa}\n\n"
                     f"Archivo comprimido guardado en:\n{ruta_salida}")
@@ -102,6 +113,8 @@ class MenuLogico:
             import json
 
             texto = leer_texto(self.archivo_actual)
+            if not all(ord(c) < 128 for c in texto):
+                return "Error: El archivo contiene caracteres especiales (tildes, n, etc). Use solo ASCII de 7 bits."
             datos_cifrados = cifrar(texto, clave)
 
             bits = bytes_a_binario(datos_cifrados).replace(" ", "")
