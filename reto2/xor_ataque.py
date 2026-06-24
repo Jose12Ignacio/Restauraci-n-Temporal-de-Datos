@@ -16,7 +16,6 @@ chars_legibles = set(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "0123456789"
     " .,;:!?-_()[]{}'\"\n\t"
-    "áéíóúüñÁÉÍÓÚÜÑ" 
 )
 
 #longitudes para probar el ataque
@@ -66,7 +65,7 @@ def puntuacion_legibilidad(texto: bytes):
     if not texto:
         return 0.0
     try:
-        cadena = texto.decode("utf-8")
+        cadena = texto.decode("ascii", errors="replace")
     except UnicodeDecodeError:
         legibles = sum(1 for b in texto if 32 <= b < 127 or b in (9, 10, 13))
         return legibles / len(texto) 
@@ -90,18 +89,9 @@ def atacar(cifrado: bytes, max_long: int = mejores_longitudes):
         texto_bytes = aplicar_xor(cifrado, clave_bytes)
         confianza = puntuacion_legibilidad(texto_bytes)
 
-        try:
-            texto_str = texto_bytes.decode("utf-8")
+        texto_str = texto_bytes.decode("ascii", errors="replace")
 
-        except UnicodeDecodeError:
-            texto_str = texto_bytes.decode("latin-1")
-
-        
-        try:
-            clave_str = clave_bytes.decode("utf-8")
-
-        except UnicodeDecodeError:
-            clave_str = clave_bytes.decode("latin-1")
+        clave_str = clave_bytes.decode("ascii", errors="replace")
 
         resultado = ResultadoAtaque(
             clave=clave_str,

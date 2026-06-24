@@ -43,7 +43,7 @@ def descifrar (datos: bytes, clave: str):
 
     validarClave(clave)
 
-    clave_bytes = clave.encode ("utf-8")
+    clave_bytes = clave.encode ("ascii")
     texto_bytes = xor_con_clave(datos, clave_bytes)
     return texto_bytes.decode("ascii")
 

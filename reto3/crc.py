@@ -23,12 +23,12 @@ def guardar_crc(ruta_crc, valor_crc):
     ruta_archivo = Path(ruta_crc)
     ruta_archivo.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(ruta_crc, "w", encoding="utf-8") as archivo:
+    with open(ruta_crc, "w", encoding="ascii") as archivo:
         archivo.write(f"{valor_crc:04X}")
 
 
 def leer_crc(ruta_crc):
-    with open(ruta_crc, "r", encoding="utf-8") as archivo:
+    with open(ruta_crc, "r", encoding="ascii") as archivo:
         contenido = archivo.read().strip()
 
     return int(contenido, 16)
