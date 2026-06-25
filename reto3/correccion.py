@@ -109,7 +109,7 @@ def recuperar_texto_aproximado(datos_corruptos):
     Intenta recuperar texto desde bytes corruptos sin usar CRC.
     Retorna solo la cadena de texto para mantener compatibilidad con Menu.py
     """
-    return datos_corruptos.decode("utf-8", errors="replace")
+    return datos_corruptos.decode("ascii", errors="replace")
 
 
 def corregir_datos_segmentados(lista_segmentos, max_bits_rafaga=16):

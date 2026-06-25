@@ -31,7 +31,7 @@ class MenuLogico:
             return False, "Primero debe seleccionar un archivo."
         return True, "Archivo válido."
 
-    
+
     # RETO 1: COMPRESIÓN Y DESCOMPRESIÓN
     def comprimir_archivo(self, algoritmo):
         valido, mensaje = self.validar_archivo()
@@ -56,20 +56,44 @@ class MenuLogico:
                 arbol = construir_arbol(texto)
                 tabla = construir_tabla(arbol)
                 bits = codificar(texto, tabla)
+                tabla_bin = ",".join(
+                    f"{''.join(format(b, '08b') for b in ch.encode('ascii'))}={codigo}"
+                    for ch, codigo in tabla.items()
+                )
+                contenido_bin = f"{tabla_bin}\n{bits}"
+                ruta_bin = self.archivo_actual + ".reto1.bin"
+                guardar_bytes(ruta_bin, contenido_bin.encode('ascii'))
                 vista_previa = f"Bits comprimidos: {bits[:60]}..."
             elif algoritmo.lower() == "lzw":
                 salida, _ = comprimir_lzw(texto)
+                contenido_lzw = ' '.join(str(c) for c in salida)
+                binario_lzw = " ".join(format(b, '08b') for b in contenido_lzw.encode('ascii'))
+                ruta_bin = self.archivo_actual + ".reto1.bin"
+                guardar_bytes(ruta_bin, binario_lzw.encode('ascii'))
                 vista_previa = f"Códigos LZW: {salida[:10]}..."
             elif algoritmo.lower() == "lz77":
+                tripletas = comprimir_lz77(texto)["tripletas"]
+                contenido_lz77 = "".join(f"({t['offset']},{t['longitud']},{t['siguiente']})" for t in tripletas)
+                binario_lz77 = " ".join(format(b, '08b') for b in contenido_lz77.encode('ascii'))
+                ruta_bin = self.archivo_actual + ".reto1.bin"
+                guardar_bytes(ruta_bin, binario_lz77.encode('ascii'))
                 vista_previa = "Algoritmo: LZ77 (compresión por tripletas offset-longitud-siguiente)"
             elif algoritmo.lower() == "lz78":
+                estructura_lz78 = comprimir_lz78(texto)
+                contenido_lz78 = "".join(f"({s['indice']},{s['simbolo']})" for s in estructura_lz78["salida"])
+                binario_lz78 = " ".join(format(b, '08b') for b in contenido_lz78.encode('ascii'))
+                ruta_bin = self.archivo_actual + ".reto1.bin"
+                guardar_bytes(ruta_bin, binario_lz78.encode('ascii'))
                 vista_previa = "Algoritmo: LZ78 (compresión por diccionario incremental)"
             else:
+                ruta_bin = self.archivo_actual + ".reto1.bin"
+                guardar_bytes(ruta_bin, json.dumps(resultado).encode('ascii'))
                 vista_previa = f"Algoritmo: {algoritmo.upper()}"
-            
+
             return (f"{vista_previa}\n\n"
-                    f"Archivo comprimido guardado en:\n{ruta_salida}")
-            
+                    f"Archivo comprimido guardado en:\n{ruta_salida}\n"
+                    f"Archivo binario guardado en:\n{ruta_bin}")
+
         except Exception as e:
             return f"Error al comprimir: {e}"
         
@@ -79,18 +103,75 @@ class MenuLogico:
             return mensaje
 
         try:
-            from common.funciones import guardar_texto
-            from reto1.reader import leer_y_descomprimir
+            from common.funciones import leer_texto, guardar_texto
+            from reto1.decompress import descomprimir
+            import json
 
-            texto_recuperado = leer_y_descomprimir(self.archivo_actual, algoritmo)
+            if self.archivo_actual.endswith('.bin'):
+                if algoritmo.lower() == "huffman":
+                    contenido = leer_texto(self.archivo_actual)
+                    lineas = contenido.strip().split('\n')
+                    tabla_bin = lineas[0]
+                    bits = lineas[1]
+                    # Reconstruir tabla: binario ASCII -> codigo Huffman -> caracter
+                    tabla_invertida = {}
+                    for entrada in tabla_bin.split(','):
+                        binario_char, codigo = entrada.split('=')
+                        # Convertir binario ASCII de vuelta a caracter
+                        char = chr(int(binario_char, 2))
+                        tabla_invertida[codigo] = char
+                    # Descomprimir usando la tabla invertida
+                    texto_recuperado = ""
+                    buffer = ""
+                    for bit in bits:
+                        buffer += bit
+                        if buffer in tabla_invertida:
+                            texto_recuperado += tabla_invertida[buffer]
+                            buffer = ""
+                    ruta_salida = self.archivo_actual.replace(".reto1.bin", "") + ".dec.txt"
+                    guardar_texto(ruta_salida, texto_recuperado)
+                    return f"Texto descomprimido:\n{texto_recuperado}\n\nGuardado en: {ruta_salida}"
+                else:
+                    import re
+                    contenido_bin = leer_texto(self.archivo_actual)
+                    bytes_lista = contenido_bin.strip().split(' ')
+                    texto_intermedio = ''.join(chr(int(b, 2)) for b in bytes_lista)
+                    if algoritmo.lower() == "lzw":
+                        salida_lzw = [int(x) for x in texto_intermedio.split(' ')]
+                        from reto1.lzw import descomprimir_lzw
+                        diccionario_inicial = {chr(i): i for i in range(128)}
+                        texto_recuperado = descomprimir_lzw(salida_lzw, diccionario_inicial)
+                    elif algoritmo.lower() == "lz77":
+                        tripletas = []
+                        for m in re.finditer(r'\(([^,]+),(\d+),([^)]*)\)', texto_intermedio):
+                            offset = m.group(1)
+                            offset = int(offset) if offset != '_' else '_'
+                            tripletas.append({"offset": offset, "longitud": int(m.group(2)), "siguiente": m.group(3)})
+                        from reto1.lz77 import descomprimir_lz77
+                        texto_recuperado = descomprimir_lz77({"tripletas": tripletas})
+                    elif algoritmo.lower() == "lz78":
+                        salida_lz78 = []
+                        for m in re.finditer(r'\((\d+),([^)]*)\)', texto_intermedio):
+                            salida_lz78.append({"indice": int(m.group(1)), "simbolo": m.group(2)})
+                        from reto1.lz78 import descomprimir_lz78
+                        texto_recuperado = descomprimir_lz78({"salida": salida_lz78})
+                    else:
+                        return "Error: algoritmo no soportado para descompresion desde .bin"
+            else:
+                contenido = leer_texto(self.archivo_actual)
+                json_data = json.loads(contenido)
+                texto_recuperado = descomprimir(json_data, algoritmo)
 
-            ruta_salida = self.archivo_actual.replace(".reto1.json", "") + ".dec.txt"
+            if self.archivo_actual.endswith('.bin'):
+                ruta_salida = self.archivo_actual.replace(".reto1.bin", "") + ".dec.txt"
+            else:
+                ruta_salida = self.archivo_actual.replace(".reto1.json", "") + ".dec.txt"
             guardar_texto(ruta_salida, texto_recuperado)
 
             return f"Texto descomprimido:\n{texto_recuperado}\n\nGuardado en: {ruta_salida}"
 
         except Exception as e:
-            return f"Error al descifrar o descomprimir: {e}"
+            return f"Error al dscifrar o descomprimir: {e}"
 
     
     # RETO 2: CIFRADO Y ATAQUES XOR
@@ -127,9 +208,13 @@ class MenuLogico:
             ruta_salida = self.archivo_actual + ".json"
             guardar_texto(ruta_salida, json.dumps(resultado, indent=2))
 
+            ruta_bin = self.archivo_actual + ".xor.bin"
+            guardar_bytes(ruta_bin, datos_cifrados)
+
             return (f"Clave usada: {clave}\n"
                     f"Bits cifrados: {bits[:40]}...\n\n"
-                    f"Archivo cifrado guardado en:\n{ruta_salida}")
+                    f"Archivo cifrado guardado en:\n{ruta_salida}\n"
+                    f"Archivo binario guardado en:\n{ruta_bin}")
 
         except ValueError as e:
             return f"Error de validación: {e}"
@@ -148,10 +233,13 @@ class MenuLogico:
             from reto2.xor_ataque import atacar
             import json
     
-            contenido = leer_texto(self.archivo_actual)
-            datos = json.loads(contenido)
-            bits = limpiar_espacios_binario(datos["ciphertext"][0])
-            cifrado = binario_a_bytes(bits)
+            if self.archivo_actual.endswith('.bin'):
+                cifrado = leer_bytes(self.archivo_actual)
+            else:
+                contenido = leer_texto(self.archivo_actual)
+                datos = json.loads(contenido)
+                bits = limpiar_espacios_binario(datos["ciphertext"][0])
+                cifrado = binario_a_bytes(bits)
     
             if clave == "":
                 resultado = atacar(cifrado)
@@ -167,7 +255,10 @@ class MenuLogico:
                 info = (f"Clave usada: {clave}\n\n"
                         f"Texto descifrado:\n{texto_recuperado}")
     
-            ruta_salida = self.archivo_actual.replace(".json", "") + ".dec.txt"
+            if self.archivo_actual.endswith('.bin'):
+                ruta_salida = self.archivo_actual.replace(".bin", "") + ".dec.txt"
+            else:
+                ruta_salida = self.archivo_actual.replace(".json", "") + ".dec.txt"
             guardar_texto(ruta_salida, texto_recuperado)
     
             return info + f"\n\nGuardado en: {ruta_salida}"
@@ -179,7 +270,7 @@ class MenuLogico:
         except Exception as e:
             return f"Error al descifrar: {e}"
 
-    
+   
     # RETO 3: ARCHIVO CORRUPTO (SEGMENTACIÓN Y VERIFICACIÓN)
     def generar_crc(self):
         """
@@ -289,10 +380,10 @@ class MenuLogico:
                 byte_modificado = datos_corruptos[idx]
                 seg["bits"] = format(byte_modificado, "08b")
 
-            #LÓGICA DE EXPORTACIÓN DEL ARCHIVO .BIN PARALELO
+            # --- LÓGICA DE EXPORTACIÓN DEL ARCHIVO .BIN PARALELO ---
             ruta_bin_salida = self.archivo_actual.replace(".json", "") + ".corrupto.bin"
             guardar_bytes(ruta_bin_salida, datos_corruptos)
-            
+            # ---------------------------------------------------------------------
 
             # Guardar el JSON modificado para el torneo
             ruta_salida_json = self.archivo_actual.replace(".json", "") + ".corrupto.json"
@@ -317,7 +408,7 @@ class MenuLogico:
             return mensaje
 
         if not self.archivo_actual.endswith('.json'):
-            return "Error: Debe seleccionar un archivo .json de Reto 3 para verificar integridad."
+            return "Error: Use el .reto3.json o .corrupto.json para verificar. El .bin no contiene los checksums necesarios."
 
         try:
             contenido = leer_texto(self.archivo_actual)
@@ -366,7 +457,7 @@ class MenuLogico:
             return mensaje
 
         if not self.archivo_actual.endswith('.json'):
-            return "Error: Para corregir por bloques debe cargar el archivo .json corrupto del torneo."
+            return "Error: Use el .corrupto.json para corregir. El .corrupto.bin no contiene los checksums necesarios."
 
         try:
             contenido = leer_texto(self.archivo_actual)
@@ -406,8 +497,9 @@ class MenuLogico:
         except Exception as e:
             return f"Error crítico durante el proceso de restauración: {e}"
 
-    
+    # =========================================================================
     # FUNCIÓN DE ANÁLISIS DE ENTRADA (DETECCIÓN DE FORMATO)
+    # =========================================================================
     def cargar_y_procesar_json(self):
         valido, mensaje = self.validar_archivo()
         if not valido:

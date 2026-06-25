@@ -178,6 +178,7 @@ class InterfazProyecto:
             filetypes=[
                 ("Archivos de texto", "*.txt"),
                 ("Archivos binarios", "*.bin"),
+                ("Archivos JSON", "*.json"),
                 ("Todos los archivos", "*.*")
             ]
         )
