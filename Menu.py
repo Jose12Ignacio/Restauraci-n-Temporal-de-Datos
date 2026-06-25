@@ -111,6 +111,8 @@ class MenuLogico:
                 if algoritmo.lower() == "huffman":
                     contenido = leer_texto(self.archivo_actual)
                     lineas = contenido.strip().split('\n')
+                    if len(lineas) < 2:
+                        return "Error: El .bin de Huffman del otro grupo no tiene el formato esperado (tabla + bits). Intente con el .json."
                     tabla_bin = lineas[0]
                     bits = lineas[1]
                     # Reconstruir tabla: binario ASCII -> codigo Huffman -> caracter
@@ -133,8 +135,16 @@ class MenuLogico:
                     return f"Texto descomprimido:\n{texto_recuperado}\n\nGuardado en: {ruta_salida}"
                 else:
                     import re
-                    contenido_bin = leer_texto(self.archivo_actual)
-                    bytes_lista = contenido_bin.strip().split(' ')
+                    try:
+                        contenido_bin = leer_texto(self.archivo_actual)
+                    except UnicodeDecodeError:
+                        with open(self.archivo_actual, 'r', encoding='utf-8') as f:
+                            contenido_bin = f.read()
+                    contenido_limpio = contenido_bin.strip()
+                    if ' ' in contenido_limpio:
+                        bytes_lista = contenido_limpio.split(' ')
+                    else:
+                        bytes_lista = [contenido_limpio[i:i+8] for i in range(0, len(contenido_limpio), 8)]
                     texto_intermedio = ''.join(chr(int(b, 2)) for b in bytes_lista)
                     if algoritmo.lower() == "lzw":
                         salida_lzw = [int(x) for x in texto_intermedio.split(' ')]
@@ -158,7 +168,11 @@ class MenuLogico:
                     else:
                         return "Error: algoritmo no soportado para descompresion desde .bin"
             else:
-                contenido = leer_texto(self.archivo_actual)
+                try:
+                    contenido = leer_texto(self.archivo_actual)
+                except UnicodeDecodeError:
+                    with open(self.archivo_actual, 'r', encoding='utf-8') as f:
+                        contenido = f.read()
                 json_data = json.loads(contenido)
                 texto_recuperado = descomprimir(json_data, algoritmo)
 

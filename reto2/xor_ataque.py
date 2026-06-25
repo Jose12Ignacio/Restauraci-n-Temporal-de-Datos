@@ -9,17 +9,17 @@ ResultadoAtaque = namedtuple("ResultadoAtaque", ["clave", "texto", "confianza", 
 
 #constantes de frecuencia
 
-chars_frecuentes = "eEaAoOsSnNiIrRlLtTdDuUcCmMpPgGbBfFyYhHvVqQjJzZxXkKwW"
+chars_frecuentes = " eEaAoOsSnNiIrRlLtTdDuUcCmMpPgGbBfFyYhHvVqQjJzZxXkKwW"
 
 chars_legibles = set(
     "abcdefghijklmnopqrstuvwxyz"
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "0123456789"
-    " .,;:!?-_()[]{}'\"\n\t"
+    " .,;:!?-_()[]{}'\"\n\t\\*/<>+=#@&%$~^|`"
 )
 
 #longitudes para probar el ataque
-mejores_longitudes = 5
+mejores_longitudes = 10
 
 
 #ataque por cada columna
@@ -74,7 +74,7 @@ def puntuacion_legibilidad(texto: bytes):
     
 
 #funcion principal
-def atacar(cifrado: bytes, max_long: int = mejores_longitudes):
+def atacar(cifrado: bytes, max_long: int = 10):
 
     if not cifrado:
         raise ValueError("el cifrado no puede estar vacio")
